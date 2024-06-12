@@ -1,0 +1,6 @@
+*.md
+.git*
+app/*
+dockers/*
+docs/*
+scripts/*

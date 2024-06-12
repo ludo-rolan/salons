@@ -1,0 +1,116 @@
+# version: '3'
+services:
+  ##########################################################
+  # Wordpress Docker container
+  ##########################################################
+  app:
+    # image: polewpk-wp 
+    build:
+      context: dockers
+      dockerfile: Dockerfile
+    depends_on:
+      - mysql
+      - memcached
+      # - mail
+    # cap and privileged needed for slowlog
+    cap_add:
+      - SYS_PTRACE
+    expose:
+      - 9000
+    volumes:
+      - ./app:/data/vhosts/app
+      - ./dockers/php/php.ini:/usr/local/etc/php/conf.d/php.ini
+    privileged: true
+    stdin_open: true
+    tty: true
+    env_file:
+      - dockers/environment.yml
+    environment:
+      - POSTFIX_RELAYHOST=[mail]:1025
+  
+  app_nginx: 
+    image: nginx:1.20.2 
+    ports:
+      - 80:80
+    volumes:
+      - ./app:/data/vhosts/app
+      - ./dockers/nginx:/etc/nginx
+    depends_on:
+      - app
+    env_file:
+      - dockers/environment.yml
+      # - dockers/environment.local.yml
+    environment:
+      - VIRTUAL_PORT=80
+      - VIRTUAL_HOST=afmm.rw.loc
+      - POSTFIX_RELAYHOST=[mail]:1025
+  #######################################
+  # MySQL server
+  #######################################
+  mysql:
+    build:
+      context: dockers/mysql/
+      dockerfile: mariadb_10.Dockerfile
+    ports:
+      - 3306:3306
+    restart: always
+    volumes:
+      - ./data/mysql:/var/lib/mysql
+    env_file:
+      - dockers/environment.yml
+      # - dockers/environment.development.yml
+      # - dockers/environment.local.yml
+  #######################################
+  # Memcached
+  #######################################
+  memcached:
+   build:
+     context: dockers/memcached/
+   env_file:
+      - dockers/environment.yml
+      # - dockers/environment.development.yml
+      # - dockers/environment.local.yml
+  #######################################
+  # Mail
+  #######################################
+  # Mailhog
+  mail:
+     image: mailhog/mailhog
+     ports:
+      - 8025:8025
+     environment:
+      - VIRTUAL_HOST=mail.afmm.rw.loc
+      - VIRTUAL_PORT=8025
+
+  #######################################
+  # phpMyAdmin
+  #######################################
+  phpmyadmin:
+   image: phpmyadmin/phpmyadmin
+   restart: always
+   depends_on:
+     - mysql
+   ports: 
+     - 8081:80
+   environment:
+     - PMA_HOSTS=mysql
+     - VIRTUAL_HOST=pma.afmm.rw.loc
+     - UPLOAD_LIMIT=800M
+     - VIRTUAL_PORT=8081
+   volumes:
+     - ./data/pma:/sessions
+
+  dart-sass:
+   image: michalklempa/dart-sass
+   container_name: dart_sass
+
+   restart: always
+   volumes:
+      - ./app:/data/vhosts/app
+
+
+# cmd pour builder le sass via docker  :  docker exec -ti dart_sass  /opt/dart-sass/sass --no-source-map  "/data/vhosts/app/wp-content/themes/afmm/assets/stylesheets/scss/main.scss:/data/vhosts/app/wp-content/themes/afmm/assets/stylesheets/css/main.min.css" --style compressed
+
+volumes:
+  mysql: 
+  phpmyadmin: 

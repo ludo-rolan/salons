@@ -1,0 +1,38 @@
+server {
+	listen 80;
+	listen [::]:80;
+	
+	server_name afmm.rw.loc;
+
+
+	root /data/vhosts/app;
+
+	index index.html index.php index.htm;
+	
+	client_max_body_size 20M;
+ 
+	location / {
+		try_files $uri $uri/ =404;
+	}
+
+    location ~* \.(png|jpg|jpeg|gif|ico|jpe|css|js|woff2)$ {
+      gzip on;
+      expires max;
+    }
+
+	location ~ \.php$ {
+		include snippets/fastcgi-php.conf;
+		fastcgi_pass 127.0.0.1:9000;
+	}
+
+	# Deny access to any files with a .php extension in the uploads directory
+	location ~* /(?:uploads|files)/.*\.php$ {
+        deny all;
+    } 
+	
+	# Deny all attempts to access hidden files such as .htaccess, .htpasswd, .DS_Store (Mac).
+    # Keep logging the requests to parse later (or to pass to firewall utilities such as fail2ban)
+    location ~ /\. {
+        deny all;
+    }
+}
